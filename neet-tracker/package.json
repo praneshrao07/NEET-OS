@@ -1,0 +1,81 @@
+{
+  "name": "neet-os",
+  "private": true,
+  "version": "1.0.0",
+  "description": "NEET OS - UG 2026 Mock Test Desktop Analytics Platform",
+  "author": "NEET OS",
+  "main": "dist-electron/main.cjs",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build:ui": "tsc -b && vite build",
+    "build:electron": "esbuild electron/main.ts --bundle --platform=node --external:electron --outfile=dist-electron/main.cjs && esbuild electron/preload.ts --bundle --platform=node --external:electron --outfile=dist-electron/preload.cjs",
+    "build": "npm run build:ui && npm run build:electron",
+    "electron:dev": "npm run build:electron && concurrently -k \"vite\" \"electron .\"",
+    "electron:build": "npm run build && electron-builder --win --x64",
+    "electron:build:portable": "npm run build && electron-builder --win portable --x64",
+    "lint": "oxlint",
+    "preview": "vite preview"
+  },
+  "build": {
+    "appId": "com.neetos.app",
+    "productName": "NEET OS",
+    "directories": {
+      "output": "dist-exe"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "build/icon.ico",
+      "build/icon.png"
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "executableName": "NEET OS",
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "lucide-react": "^1.48.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "recharts": "^3.10.1",
+    "tailwindcss": "^4.3.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-react": "^6.1.1",
+    "concurrently": "^10.0.5",
+    "cross-env": "^10.1.0",
+    "electron": "^44.4.5",
+    "electron-builder": "^26.15.3",
+    "esbuild": "^0.28.2",
+    "oxlint": "^1.81.0",
+    "png-to-ico": "^3.0.2",
+    "typescript": "~6.0.2",
+    "vite": "^8.3.0",
+    "wait-on": "^9.1.0"
+  }
+}
