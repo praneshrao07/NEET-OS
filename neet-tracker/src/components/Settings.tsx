@@ -5,6 +5,7 @@ import {
   Download,
   Upload,
   RefreshCw,
+  RotateCcw,
   Trash2,
   CheckCircle2,
   FileSpreadsheet,
@@ -26,6 +27,7 @@ interface SettingsProps {
   onImportJSON: () => void;
   onExportCSV: () => void;
   onResetMocks: (mocks: MockTest[]) => void;
+  onResetSyllabus?: () => void;
 }
 
 export const Settings: React.FC<SettingsProps> = ({
@@ -36,6 +38,7 @@ export const Settings: React.FC<SettingsProps> = ({
   onImportJSON,
   onExportCSV,
   onResetMocks,
+  onResetSyllabus,
 }) => {
   const { theme, themeId, setTheme, availableThemes } = useTheme();
   const [targetScore, setTargetScore] = useState(settings.targetScore);
@@ -344,6 +347,21 @@ export const Settings: React.FC<SettingsProps> = ({
                 <RefreshCw className="w-4 h-4 text-amber-400" />
                 <span>Load 18 Sample Mocks</span>
               </button>
+
+              {/* Reset Syllabus Schedule */}
+              {onResetSyllabus && (
+                <button
+                  onClick={() => {
+                    if (window.confirm('Reset all 73 chapters to the default NEET 2026 spaced repetition schedule?')) {
+                      onResetSyllabus();
+                    }
+                  }}
+                  className="flex items-center justify-center gap-2 p-3 rounded-xl bg-[#0E1522] border border-[#1A2840] hover:border-cyan-500/60 text-xs font-semibold text-slate-200 hover:text-white transition-all cursor-pointer"
+                >
+                  <RotateCcw className="w-4 h-4 text-cyan-400" />
+                  <span>Reset Syllabus Schedule</span>
+                </button>
+              )}
             </div>
 
             <div className="mt-4 pt-3 border-t border-[#141F32] flex items-center justify-between">

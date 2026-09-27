@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   LayoutDashboard,
+  BookOpen,
   FileSpreadsheet,
   Settings as SettingsIcon,
   Sparkles,
@@ -15,6 +16,7 @@ interface SidebarProps {
   onSelectTab: (tab: TabType) => void;
   settings: AppSettings;
   onOpenSettings: () => void;
+  dueTodayCount?: number;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -22,11 +24,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectTab,
   settings,
   onOpenSettings,
+  dueTodayCount = 0,
 }) => {
   const { theme } = useTheme();
 
   const navItems: { id: TabType; label: string; icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }> }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'syllabus', label: 'Syllabus', icon: BookOpen },
     { id: 'mock-log', label: 'Mock Log', icon: FileSpreadsheet },
     { id: 'settings', label: 'Settings', icon: SettingsIcon },
   ];
@@ -103,7 +107,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   style={{ color: isActive ? theme.accentPrimary : undefined }}
                 />
                 <span>{item.label}</span>
-                {isActive && (
+                {item.id === 'syllabus' && dueTodayCount > 0 && (
+                  <span
+                    className="ml-auto px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold leading-none"
+                    style={{
+                      backgroundColor: `rgba(${theme.accentRgb}, 0.2)`,
+                      color: theme.accentGlow,
+                      border: `1px solid rgba(${theme.accentRgb}, 0.45)`,
+                      boxShadow: `0 0 8px rgba(${theme.accentRgb}, 0.35)`,
+                    }}
+                    title={`${dueTodayCount} active recall revision${dueTodayCount > 1 ? 's' : ''} due today`}
+                  >
+                    {dueTodayCount}
+                  </span>
+                )}
+                {isActive && (item.id !== 'syllabus' || dueTodayCount === 0) && (
                   <span
                     className="ml-auto w-1.5 h-1.5 rounded-full"
                     style={{

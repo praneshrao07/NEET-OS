@@ -165,6 +165,15 @@ ipcMain.handle('save-settings', (_, settings) => {
   return writeStoredData({ settings });
 });
 
+ipcMain.handle('get-syllabus', () => {
+  const data = readStoredData();
+  return data?.syllabus || null;
+});
+
+ipcMain.handle('save-syllabus', (_, syllabus) => {
+  return writeStoredData({ syllabus });
+});
+
 // File Export Dialog IPC
 ipcMain.handle('export-data', async (_, content: string, defaultFileName: string, filterName: string, extensions: string[]) => {
   if (!mainWindow) return false;

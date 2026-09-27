@@ -1,14 +1,15 @@
 import React from 'react';
 import { Plus, Calendar, ArrowRight } from 'lucide-react';
-import type { KPIData } from '../types';
+import type { KPIData, TabType } from '../types';
 import { useTheme } from '../context/ThemeContext';
 
 interface HeaderProps {
   kpi: KPIData;
   onOpenAddModal: () => void;
+  currentTab?: TabType;
 }
 
-export const Header: React.FC<HeaderProps> = ({ kpi, onOpenAddModal }) => {
+export const Header: React.FC<HeaderProps> = ({ kpi, onOpenAddModal, currentTab = 'dashboard' }) => {
   const { theme } = useTheme();
 
   const currentDate = new Date().toLocaleDateString('en-US', {
@@ -30,10 +31,16 @@ export const Header: React.FC<HeaderProps> = ({ kpi, onOpenAddModal }) => {
       {/* Left Title & Subtitle */}
       <div>
         <h1 className="font-heading font-bold text-xl text-white tracking-wide flex items-center gap-2">
-          NEET MOCK PERFORMANCE
+          {currentTab === 'syllabus' && 'NEET SYLLABUS & ACTIVE RECALL'}
+          {currentTab === 'mock-log' && 'NEET MOCK TEST LOG'}
+          {currentTab === 'settings' && 'SYSTEM SETTINGS'}
+          {currentTab === 'dashboard' && 'NEET MOCK PERFORMANCE'}
         </h1>
         <p className="text-xs text-[#8E9AAA] font-medium mt-0.5">
-          Mock Test Performance & Progress Tracker
+          {currentTab === 'syllabus' && 'Spaced Repetition Engine • Revision Schedule & Question Tracking'}
+          {currentTab === 'mock-log' && 'Comprehensive Test History & Error Tracking'}
+          {currentTab === 'settings' && 'Configure Targets, Themes & Local Data Management'}
+          {currentTab === 'dashboard' && 'Mock Test Performance & Progress Tracker'}
         </p>
       </div>
 
@@ -46,13 +53,27 @@ export const Header: React.FC<HeaderProps> = ({ kpi, onOpenAddModal }) => {
           boxShadow: `0 0 15px rgba(${theme.accentRgb}, 0.15)`,
         }}
       >
-        <span className="text-xs font-semibold text-slate-300">Better Attempts</span>
-        <ArrowRight className="w-3 h-3" style={{ color: theme.accentGlow }} />
-        <span className="text-xs font-semibold" style={{ color: theme.accentPrimary }}>Higher Scores</span>
-        <ArrowRight className="w-3 h-3" style={{ color: theme.accentGlow }} />
-        <span className="text-xs font-bold tracking-wide" style={{ color: theme.accentGlow }}>
-          Your Dream
-        </span>
+        {currentTab === 'syllabus' ? (
+          <>
+            <span className="text-xs font-semibold text-slate-300">Active Recall</span>
+            <ArrowRight className="w-3 h-3" style={{ color: theme.accentGlow }} />
+            <span className="text-xs font-semibold" style={{ color: theme.accentPrimary }}>Spaced Repetition</span>
+            <ArrowRight className="w-3 h-3" style={{ color: theme.accentGlow }} />
+            <span className="text-xs font-bold tracking-wide" style={{ color: theme.accentGlow }}>
+              Target: 31 Dec
+            </span>
+          </>
+        ) : (
+          <>
+            <span className="text-xs font-semibold text-slate-300">Better Attempts</span>
+            <ArrowRight className="w-3 h-3" style={{ color: theme.accentGlow }} />
+            <span className="text-xs font-semibold" style={{ color: theme.accentPrimary }}>Higher Scores</span>
+            <ArrowRight className="w-3 h-3" style={{ color: theme.accentGlow }} />
+            <span className="text-xs font-bold tracking-wide" style={{ color: theme.accentGlow }}>
+              Your Dream
+            </span>
+          </>
+        )}
       </div>
 
       {/* Right Widgets: Progress Ring + Date + Add Mock Button */}

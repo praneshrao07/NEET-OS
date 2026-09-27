@@ -26,7 +26,54 @@ export interface AppSettings {
   theme?: ThemeId;
 }
 
-export type TabType = 'dashboard' | 'mock-log' | 'settings';
+export type TabType = 'dashboard' | 'syllabus' | 'mock-log' | 'settings';
+
+export type SubjectType = 'physics' | 'chemistry' | 'biology';
+
+export type ChapterStatus = 'Not Started' | 'In Progress' | 'Completed';
+
+export interface ChapterProgress {
+  id: string;
+  chapterNumber: number;
+  name: string;
+  subject: SubjectType;
+  status: ChapterStatus;
+  questionsSolved: number;
+  revisionCount: number; // 0 for Rev 0, 1 for R1, 2 for R2, 3 for R3, 4 for R4+
+  completedAt?: string; // YYYY-MM-DD
+  lastRevisionDate?: string; // YYYY-MM-DD
+  nextRevisionDue?: string | null; // YYYY-MM-DD or null
+}
+
+export type DueStatusType = 'due-today' | 'overdue' | 'in-future' | 'not-scheduled';
+
+export interface ChapterDueInfo {
+  status: DueStatusType;
+  label: string;
+  diffDays: number;
+}
+
+export interface SyllabusSubjectSummary {
+  total: number;
+  completed: number;
+  inProgress: number;
+  notStarted: number;
+  questions: number;
+}
+
+export interface SyllabusSummary {
+  totalChapters: number;
+  completedChapters: number;
+  completionPercent: number;
+  physics: SyllabusSubjectSummary;
+  chemistry: SyllabusSubjectSummary;
+  biology: SyllabusSubjectSummary;
+  totalQuestionsSolved: number;
+  dueTodayCount: number;
+  overdueCount: number;
+  daysRemaining: number;
+  requiredPaceWeekly: number;
+}
 
 export interface SubjectStats {
   latest: number;

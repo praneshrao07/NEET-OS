@@ -6,31 +6,42 @@ import { Dashboard } from './components/Dashboard';
 import { MockLog } from './components/MockLog';
 import { Settings } from './components/Settings';
 import { AddMockModal } from './components/AddMockModal';
-import type { MockTest, AppSettings, TabType } from './types';
+import { SyllabusTracker } from './components/SyllabusTracker';
+import type { MockTest, AppSettings, TabType, ChapterProgress } from './types';
 import { DEFAULT_SETTINGS, INITIAL_MOCK_TESTS } from './data/seedData';
+import { INITIAL_SYLLABUS_PROGRESS } from './data/syllabusData';
 import { StorageService } from './services/storage';
 import { computeKPIData } from './utils/calculations';
+import { getChapterDueStatus, logRevisionForChapter } from './utils/spacedRepetition';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 
 const AppContent: React.FC<{
   mocks: MockTest[];
+  syllabus: ChapterProgress[];
   settings: AppSettings;
   onSaveMock: (mock: Omit<MockTest, 'id' | 'mockNumber'> & { id?: string; mockNumber?: number }) => Promise<void>;
   onDeleteMock: (id: string) => Promise<void>;
   onToggleErrorAnalysis: (id: string) => Promise<void>;
   onSaveSettings: (settings: AppSettings) => Promise<void>;
   onResetMocks: (mocks: MockTest[]) => Promise<void>;
+  onUpdateChapter: (id: string, updates: Partial<ChapterProgress>) => Promise<void>;
+  onLogRevision: (id: string) => Promise<void>;
+  onResetSyllabus: () => Promise<void>;
   onExportJSON: () => Promise<void>;
   onImportJSON: () => Promise<void>;
   onExportCSV: () => Promise<void>;
 }> = ({
   mocks,
+  syllabus,
   settings,
   onSaveMock,
   onDeleteMock,
   onToggleErrorAnalysis,
   onSaveSettings,
   onResetMocks,
+  onUpdateChapter,
+  onLogRevision,
+  onResetSyllabus,
   onExportJSON,
   onImportJSON,
   onExportCSV,
@@ -42,6 +53,11 @@ const AppContent: React.FC<{
 
   // Compute live KPIs
   const kpi = computeKPIData(mocks, settings);
+
+  // Active recall due today count for sidebar badge
+  const dueTodayCount = syllabus.filter(
+    (c) => getChapterDueStatus(c).status === 'due-today'
+  ).length;
 
   // Next mock number
   const nextMockNumber = mocks.length > 0
@@ -64,12 +80,14 @@ const AppContent: React.FC<{
           onSelectTab={setCurrentTab}
           settings={settings}
           onOpenSettings={() => setCurrentTab('settings')}
+          dueTodayCount={dueTodayCount}
         />
 
         {/* Workspace Area: Header + Active Tab Content */}
         <div className="flex-1 flex flex-col overflow-hidden">
           <Header
             kpi={kpi}
+            currentTab={currentTab}
             onOpenAddModal={() => {
               setEditingMock(null);
               setIsAddModalOpen(true);
@@ -87,6 +105,15 @@ const AppContent: React.FC<{
                   setIsAddModalOpen(true);
                 }}
                 onToggleErrorAnalysis={onToggleErrorAnalysis}
+              />
+            )}
+
+            {currentTab === 'syllabus' && (
+              <SyllabusTracker
+                syllabus={syllabus}
+                onUpdateChapter={onUpdateChapter}
+                onLogRevision={onLogRevision}
+                onResetSyllabus={onResetSyllabus}
               />
             )}
 
@@ -116,6 +143,7 @@ const AppContent: React.FC<{
                 onImportJSON={onImportJSON}
                 onExportCSV={onExportCSV}
                 onResetMocks={onResetMocks}
+                onResetSyllabus={onResetSyllabus}
               />
             )}
           </main>
@@ -139,6 +167,7 @@ const AppContent: React.FC<{
 
 export const App: React.FC = () => {
   const [mocks, setMocks] = useState<MockTest[]>([]);
+  const [syllabus, setSyllabus] = useState<ChapterProgress[]>([]);
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -146,15 +175,22 @@ export const App: React.FC = () => {
   useEffect(() => {
     async function initData() {
       try {
-        const [loadedMocks, loadedSettings] = await Promise.all([
+        const [loadedMocks, loadedSettings, loadedSyllabus] = await Promise.all([
           StorageService.getMocks(),
           StorageService.getSettings(),
+          StorageService.getSyllabus(),
         ]);
         setMocks(loadedMocks && loadedMocks.length > 0 ? loadedMocks : INITIAL_MOCK_TESTS);
         setSettings(loadedSettings || DEFAULT_SETTINGS);
+        setSyllabus(
+          loadedSyllabus && loadedSyllabus.length > 0
+            ? loadedSyllabus
+            : INITIAL_SYLLABUS_PROGRESS
+        );
       } catch (err) {
         console.error('Error loading initial data:', err);
         setMocks(INITIAL_MOCK_TESTS);
+        setSyllabus(INITIAL_SYLLABUS_PROGRESS);
       } finally {
         setIsLoading(false);
       }
@@ -217,8 +253,26 @@ export const App: React.FC = () => {
     await StorageService.saveMocks(newMocks);
   };
 
+  // Syllabus Handlers
+  const handleUpdateChapter = async (id: string, updates: Partial<ChapterProgress>) => {
+    const updated = syllabus.map((c) => (c.id === id ? { ...c, ...updates } : c));
+    setSyllabus(updated);
+    await StorageService.saveSyllabus(updated);
+  };
+
+  const handleLogRevision = async (id: string) => {
+    const updated = syllabus.map((c) => (c.id === id ? logRevisionForChapter(c) : c));
+    setSyllabus(updated);
+    await StorageService.saveSyllabus(updated);
+  };
+
+  const handleResetSyllabus = async () => {
+    const fresh = await StorageService.resetSyllabus(false);
+    setSyllabus(fresh);
+  };
+
   const handleExportJSON = async () => {
-    await StorageService.exportJSON(mocks, settings);
+    await StorageService.exportJSON(mocks, settings, syllabus);
   };
 
   const handleImportJSON = async () => {
@@ -228,7 +282,11 @@ export const App: React.FC = () => {
       setSettings(imported.settings);
       await StorageService.saveMocks(imported.mocks);
       await StorageService.saveSettings(imported.settings);
-      alert(`Successfully imported ${imported.mocks.length} mock tests!`);
+      if (imported.syllabus && imported.syllabus.length > 0) {
+        setSyllabus(imported.syllabus);
+        await StorageService.saveSyllabus(imported.syllabus);
+      }
+      alert(`Successfully imported backup!`);
     }
   };
 
@@ -251,12 +309,16 @@ export const App: React.FC = () => {
     <ThemeProvider initialThemeId={settings.theme}>
       <AppContent
         mocks={mocks}
+        syllabus={syllabus}
         settings={settings}
         onSaveMock={handleSaveMock}
         onDeleteMock={handleDeleteMock}
         onToggleErrorAnalysis={handleToggleErrorAnalysis}
         onSaveSettings={handleSaveSettings}
         onResetMocks={handleResetMocks}
+        onUpdateChapter={handleUpdateChapter}
+        onLogRevision={handleLogRevision}
+        onResetSyllabus={handleResetSyllabus}
         onExportJSON={handleExportJSON}
         onImportJSON={handleImportJSON}
         onExportCSV={handleExportCSV}

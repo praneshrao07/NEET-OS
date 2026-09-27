@@ -1,5 +1,6 @@
-import type { MockTest, AppSettings } from '../types';
+import type { MockTest, AppSettings, ChapterProgress } from '../types';
 import { INITIAL_MOCK_TESTS, DEFAULT_SETTINGS } from '../data/seedData';
+import { INITIAL_SYLLABUS_PROGRESS, getCleanInitialSyllabus } from '../data/syllabusData';
 
 // Augment window object for Electron API bridge
 declare global {
@@ -9,6 +10,8 @@ declare global {
       saveMocks: (mocks: MockTest[]) => Promise<boolean>;
       getSettings: () => Promise<AppSettings>;
       saveSettings: (settings: AppSettings) => Promise<boolean>;
+      getSyllabus: () => Promise<ChapterProgress[] | null>;
+      saveSyllabus: (syllabus: ChapterProgress[]) => Promise<boolean>;
       exportData: (content: string, defaultFileName: string, filterName: string, extensions: string[]) => Promise<boolean>;
       importData: () => Promise<string | null>;
       minimizeWindow: () => void;
@@ -22,6 +25,7 @@ declare global {
 const STORAGE_KEYS = {
   MOCKS: 'neet_mock_tracker_mocks_v1',
   SETTINGS: 'neet_mock_tracker_settings_v1',
+  SYLLABUS: 'neet_mock_tracker_syllabus_v1',
 };
 
 export const StorageService = {
@@ -110,15 +114,67 @@ export const StorageService = {
     }
   },
 
-  async exportJSON(mocks: MockTest[], settings: AppSettings): Promise<void> {
+  async getSyllabus(): Promise<ChapterProgress[]> {
+    if (window.electronAPI) {
+      try {
+        const electronSyllabus = await window.electronAPI.getSyllabus();
+        if (electronSyllabus && electronSyllabus.length > 0) {
+          return electronSyllabus;
+        }
+      } catch (err) {
+        console.warn('Error reading Electron syllabus, falling back:', err);
+      }
+    }
+
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.SYLLABUS);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.error('Failed reading localStorage syllabus:', e);
+    }
+
+    // Default seed data
+    await this.saveSyllabus(INITIAL_SYLLABUS_PROGRESS);
+    return INITIAL_SYLLABUS_PROGRESS;
+  },
+
+  async saveSyllabus(syllabus: ChapterProgress[]): Promise<void> {
+    try {
+      localStorage.setItem(STORAGE_KEYS.SYLLABUS, JSON.stringify(syllabus));
+    } catch (e) {
+      console.error('Failed saving syllabus to localStorage:', e);
+    }
+
+    if (window.electronAPI) {
+      try {
+        await window.electronAPI.saveSyllabus(syllabus);
+      } catch (err) {
+        console.error('Failed saving syllabus to Electron:', err);
+      }
+    }
+  },
+
+  async resetSyllabus(clean = false): Promise<ChapterProgress[]> {
+    const fresh = clean ? getCleanInitialSyllabus() : INITIAL_SYLLABUS_PROGRESS;
+    await this.saveSyllabus(fresh);
+    return fresh;
+  },
+
+  async exportJSON(mocks: MockTest[], settings: AppSettings, syllabus?: ChapterProgress[]): Promise<void> {
     const payload = JSON.stringify({
-      version: '2026.1',
+      version: '2026.2',
       exportedAt: new Date().toISOString(),
       settings,
       mocks,
+      syllabus: syllabus || undefined,
     }, null, 2);
 
-    const fileName = `neet-mocks-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    const fileName = `neet-os-backup-${new Date().toISOString().slice(0, 10)}.json`;
 
     if (window.electronAPI) {
       await window.electronAPI.exportData(payload, fileName, 'JSON Files', ['json']);
@@ -187,7 +243,7 @@ export const StorageService = {
     URL.revokeObjectURL(url);
   },
 
-  async importJSON(): Promise<{ mocks: MockTest[]; settings: AppSettings } | null> {
+  async importJSON(): Promise<{ mocks: MockTest[]; settings: AppSettings; syllabus?: ChapterProgress[] } | null> {
     let rawContent: string | null = null;
 
     if (window.electronAPI) {
@@ -220,6 +276,7 @@ export const StorageService = {
         return {
           mocks: data.mocks,
           settings: data.settings || DEFAULT_SETTINGS,
+          syllabus: Array.isArray(data.syllabus) ? data.syllabus : undefined,
         };
       }
       throw new Error('Unrecognized mock data format');

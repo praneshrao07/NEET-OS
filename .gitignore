@@ -1,0 +1,6 @@
+*.exe
+dist-exe/
+dist-electron/
+dist/
+node_modules/
+*.log

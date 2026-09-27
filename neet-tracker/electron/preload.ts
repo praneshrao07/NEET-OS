@@ -5,6 +5,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveMocks: (mocks: unknown) => ipcRenderer.invoke('save-mocks', mocks),
   getSettings: () => ipcRenderer.invoke('get-settings'),
   saveSettings: (settings: unknown) => ipcRenderer.invoke('save-settings', settings),
+  getSyllabus: () => ipcRenderer.invoke('get-syllabus'),
+  saveSyllabus: (syllabus: unknown) => ipcRenderer.invoke('save-syllabus', syllabus),
   exportData: (content: string, defaultFileName: string, filterName: string, extensions: string[]) =>
     ipcRenderer.invoke('export-data', content, defaultFileName, filterName, extensions),
   importData: () => ipcRenderer.invoke('import-data'),
